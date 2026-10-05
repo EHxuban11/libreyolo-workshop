@@ -249,7 +249,8 @@ print("Give these three numbers to the leaderboard. Then: why do you think your 
 
     md("""## Step 8: try your own photo
 
-Take a photo of one of the signs with your phone, upload it here, and see what your model finds."""),
+Take a photo of one of the signs with your phone, upload it here, and see what your model finds.
+No photo? Press **Cancel upload** and go on to Step 9."""),
 
     code("""#@title Step 8: try your own photo
 try:
@@ -258,6 +259,11 @@ try:
 except ImportError:
     uploaded = []
     print("Outside Colab: set uploaded = ['path/to/photo.jpg'] and run this cell again.")
+except KeyboardInterrupt:
+    uploaded = []
+    print("No photo this time. Go on to Step 9.")
+if not uploaded:
+    print("Nothing uploaded; the cell does nothing without a photo.")
 for name in uploaded:
     r = best(name, conf=0.25)
     boxes = [(int(c), *xyxy) for c, xyxy in zip(r.boxes.cls.tolist(), r.boxes.xyxy.tolist())]
