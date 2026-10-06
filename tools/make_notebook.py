@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Write the workshop's training notebook: train_signs.ipynb at the root of this repository.
+"""Write the workshop's training notebook: train_hands.ipynb at the root of this repository.
 
     python3 tools/make_notebook.py
 
@@ -12,17 +12,17 @@ import pathlib
 import nbformat as nbf
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
-OUT = ROOT / "train_signs.ipynb"
+OUT = ROOT / "train_hands.ipynb"
 
 md = nbf.v4.new_markdown_cell
 code = nbf.v4.new_code_cell
 
 cells = [
-    md("""# Train your own sign detector with LibreYOLO
+    md("""# Train your own rock, paper, scissors detector with LibreYOLO
 
 **LibreYOLO hands-on workshop, step 3: train and evaluate.**
 
-You will fine-tune a detector on the photos your group collected and labelled, with **one change**
+You will fine-tune a detector on the hand photos your group took and labelled, with **one change**
 written on your experiment card, and report your score to the leaderboard.
 
 **Before you start:** in the menu, **Runtime > Change runtime type > T4 GPU**, then **Save**.
@@ -34,10 +34,10 @@ Then run the cells from top to bottom: click a cell and press **Shift + Enter**.
 | 2 | Choose your experiment card | |
 | 3 | Download the dataset | |
 | 4 | Look at the labels | |
-| 5 | Train | a few minutes on the T4 |
+| 5 | Train | about 10 minutes on the T4 |
 | 6 | Evaluate and look at the mistakes | 1 min |
 | 7 | Your line for the leaderboard | |
-| 8 | Try your own photo | |
+| 8 | Try a photo of your hand | |
 | 9 | Download your model | |"""),
 
     code("""#@title Step 1: install LibreYOLO
@@ -52,16 +52,17 @@ else:
 
     md("""## Step 2: your experiment card
 
-Everyone trains on the same photos and changes **exactly one thing**, so the leaderboard shows what each change does.
+Everyone changes **exactly one thing** against card A, so the leaderboard shows what each change does.
+Every card is scored on the same 100 validation photos, labelled by Roboflow's annotators, that nobody in the room labelled.
 Pick the letter on your card in the box on the right, then run the cell.
 
 | Card | Change | The bet |
 |---|---|---|
-| A | nothing | The baseline everyone compares against |
-| B | `flip_prob=0` | Mirroring turns a left arrow into a right arrow |
-| C | `mosaic_prob=0` | With so few photos, stitching four into one may hurt |
-| D | `imgsz=320` | Four times fewer pixels: faster, but far signs get lost |
-| E | `epochs=10` | Ten passes are not enough to learn |
+| A | nothing | The baseline: our photos and our labels |
+| B | Roboflow's labels | The same photos, but the Roboflow ones keep the labels Roboflow's annotators drew. How much are careful labels worth? |
+| C | only our photos | Only the photos the room took, no Roboflow photos. Is a small dataset from the right people enough? |
+| D | `imgsz=320` | Four times fewer pixels: faster, but small hands get lost |
+| E | a third of the epochs | Too few passes to learn |
 | F | `freeze="backbone"` | Keep the COCO features, train only the neck and head |
 | G | `LibreYOLO9s.pt` | A bigger model: more accurate, slower |
 | H | `lr0=0.001` | A learning rate ten times smaller: careful, and too slow |"""),
@@ -70,57 +71,101 @@ Pick the letter on your card in the box on the right, then run the cell.
 CARD = "A"  #@param ["A", "B", "C", "D", "E", "F", "G", "H"]
 
 CARDS = {
-    "A": ("The baseline",    "LibreYOLO9t.pt", {}),
-    "B": ("No flips",        "LibreYOLO9t.pt", {"flip_prob": 0}),
-    "C": ("No mosaic",       "LibreYOLO9t.pt", {"mosaic_prob": 0}),
-    "D": ("Small input",     "LibreYOLO9t.pt", {"imgsz": 320}),
-    "E": ("Short training",  "LibreYOLO9t.pt", {"epochs": 10}),
-    "F": ("Frozen backbone", "LibreYOLO9t.pt", {"freeze": "backbone"}),
-    "G": ("Bigger model",    "LibreYOLO9s.pt", {}),
-    "H": ("Tiny steps",      "LibreYOLO9t.pt", {"lr0": 0.001}),
+    "A": ("The baseline",      "LibreYOLO9t.pt", {}),
+    "B": ("Roboflow's labels", "LibreYOLO9t.pt", {}),   # other labels: data_B.yaml, Step 3
+    "C": ("Only our photos",   "LibreYOLO9t.pt", {}),   # fewer photos: data_C.yaml, Step 3
+    "D": ("Small input",       "LibreYOLO9t.pt", {"imgsz": 320}),
+    "E": ("Short training",    "LibreYOLO9t.pt", {}),   # a third of the epochs, set in Step 3
+    "F": ("Frozen backbone",   "LibreYOLO9t.pt", {"freeze": "backbone"}),
+    "G": ("Bigger model",      "LibreYOLO9s.pt", {}),
+    "H": ("Tiny steps",        "LibreYOLO9t.pt", {"lr0": 0.001}),
 }
 TITLE, WEIGHTS, CHANGE = CARDS[CARD]
-# The same base settings for everyone; the card changes one of them.
-SETTINGS = {"epochs": 50, "imgsz": 640, "batch": 16, **CHANGE}
+VARIANT = {"B": "data_B.yaml", "C": "data_C.yaml"}.get(CARD, "data.yaml")
 print(f"Card {CARD}: {TITLE}")
 print(f"Model: {WEIGHTS}")
-print(f"Settings: {SETTINGS}")"""),
+print(f"Dataset file: {VARIANT}")"""),
 
     md("""## Step 3: the dataset
 
-Paste the dataset link from the slide into the box on the right (a Google Drive share link or any direct link to a
-`.zip`), then run the cell. It downloads the photos and labels and shows how many boxes each class has."""),
+Leave the box empty and run the cell. It downloads the room's dataset, made at coffee time from everyone's labels.
+If that is not published yet, it takes the backup dataset (Roboflow's photos and labels) and says so.
+Only paste a link if the slide tells you to.
+
+It then shows how many photos and boxes each class has, and sets the number of epochs so that training takes
+about 10 minutes on Colab's T4.
+
+The Roboflow photos come from the [Rock Paper Scissors dataset](https://universe.roboflow.com/rock-paper-scissors-2/rock-paper-scissors-bwev7)
+on Roboflow Universe, CC BY 4.0."""),
 
     code("""#@title Step 3: download the dataset
 DATASET_URL = ""  #@param {type:"string"}
 
-import pathlib, shutil, urllib.request, zipfile, collections
+import pathlib, shutil, urllib.request, urllib.error, zipfile, collections, yaml
 
-if not DATASET_URL.strip():
-    raise ValueError("Paste the dataset link from the slide into DATASET_URL, then run this cell again.")
+RELEASE = "https://github.com/EHxuban11/libreyolo-workshop/releases/download/data/"
+ROOM, BACKUP = RELEASE + "rps-room.zip", RELEASE + "rps-backup.zip"
 
+def published(url):
+    try:
+        urllib.request.urlopen(urllib.request.Request(url, method="HEAD"), timeout=30)
+        return True
+    except Exception:
+        return False
+
+url = DATASET_URL.strip()
+if not url:
+    url = ROOM if published(ROOM) else BACKUP
+    print("Dataset:", "the room's photos and labels" if url == ROOM else
+          "the backup, Roboflow's photos and labels (the room's dataset is not published yet)")
 ZIP = pathlib.Path("dataset.zip")
-if "drive.google.com" in DATASET_URL:
+if "drive.google.com" in url:
     import gdown
-    gdown.download(DATASET_URL.strip(), str(ZIP), quiet=True, fuzzy=True)
+    gdown.download(url, str(ZIP), quiet=True, fuzzy=True)
 else:
-    urllib.request.urlretrieve(DATASET_URL.strip(), ZIP)
+    urllib.request.urlretrieve(url, ZIP)
 
 ROOT = pathlib.Path("dataset")
 shutil.rmtree(ROOT, ignore_errors=True)
 with zipfile.ZipFile(ZIP) as z:
     z.extractall(ROOT)
-DATA = next(ROOT.rglob("data.yaml"))   # the dataset's description file
-DATASET = DATA.parent
+BASE = next(ROOT.rglob("data.yaml"))   # card A's description of the dataset
+DATASET = BASE.parent
+DATA = DATASET / VARIANT                # your card's
+if not DATA.exists():
+    print(f"This dataset has no {VARIANT}, so card {CARD} trains on data.yaml, like card A.")
+    DATA = BASE
 
-import yaml
-NAMES = yaml.safe_load(DATA.read_text())["names"]
-NAMES = dict(enumerate(NAMES)) if isinstance(NAMES, list) else {int(k): v for k, v in NAMES.items()}
-for split in ("train", "val"):
-    labels = sorted((DATASET / "labels" / split).glob("*.txt"))
-    boxes = collections.Counter(NAMES[int(line.split()[0])] for f in labels for line in f.read_text().splitlines() if line.strip())
-    empty = sum(1 for f in labels if not f.read_text().strip())
-    print(f"{split:5}: {len(labels):3} photos ({empty} with no sign), boxes per class: {dict(sorted(boxes.items()))}")"""),
+def folders(data_yaml):
+    \"\"\"The training folders and the class names of a data.yaml.\"\"\"
+    d = yaml.safe_load(data_yaml.read_text())
+    train = d["train"] if isinstance(d["train"], list) else [d["train"]]
+    names = d["names"]
+    names = dict(enumerate(names)) if isinstance(names, list) else {int(k): v for k, v in names.items()}
+    return [DATASET / t for t in train], names
+
+def photos(dirs):
+    return sorted(p for d in dirs for p in d.glob("*") if p.suffix.lower() in (".jpg", ".jpeg", ".png", ".webp"))
+
+TRAIN_DIRS, NAMES = folders(DATA)
+VAL_DIR = DATASET / "images" / "val"
+for title, dirs in (("train", TRAIN_DIRS), ("val", [VAL_DIR])):
+    for d in dirs:
+        labels = sorted((d.parent.parent / "labels" / d.name).glob("*.txt"))
+        boxes = collections.Counter(NAMES[int(line.split()[0])] for f in labels for line in f.read_text().splitlines() if line.strip())
+        empty = sum(1 for f in labels if not f.read_text().strip())
+        print(f"{title:5} {d.name:8} {len(labels):4} photos ({empty} with no hand), boxes: {dict(sorted(boxes.items()))}")
+
+# Epochs: the same for every card, from card A's dataset, so that a run takes about 10 minutes on a T4.
+# The estimate comes from the dry run on Colab's T4: about 7 seconds per epoch for 110 photos (train and val).
+n_base, n_card, n_val = len(photos(folders(BASE)[0])), len(photos(TRAIN_DIRS)), len(photos([VAL_DIR]))
+EPOCHS = max(8, min(50, round(10 * 60 / (7 * (n_base + n_val) / 110))))
+epochs = max(3, EPOCHS // 3) if CARD == "E" else EPOCHS
+SETTINGS = {"epochs": epochs, "imgsz": 640, "batch": 16, **CHANGE}
+minutes = max(1, round(epochs * 7 * (n_card + n_val) / 110 / 60))
+print(f"\\nSettings: {SETTINGS}")
+print(f"Expected time on a T4: about {minutes} minute{'s' if minutes > 1 else ''}" + {
+    "D": " or less (smaller photos)", "F": " or less (fewer layers learn)", "G": " or more (a bigger model)"}.get(CARD, ""))"""),
 
     code("""#@title Step 4: look at the labels
 import random
@@ -173,7 +218,7 @@ def show(images, titles):
     plt.tight_layout()
     plt.show()
 
-train_images = sorted((DATASET / "images" / "train").glob("*"))
+train_images = photos(TRAIN_DIRS)
 sample = random.Random(0).sample(train_images, min(6, len(train_images)))
 def count(n, word):
     return f"{n} {word}{'' if n == 1 else ('es' if word.endswith('x') else 's')}"
@@ -182,9 +227,10 @@ show([draw(p, label_boxes(p)) for p in sample], [count(len(label_boxes(p)), "box
 
     md("""## Step 5: train
 
-This fine-tunes a model that already learned to see on COCO (118,287 photos) so that it learns our six classes.
-Each **epoch** is one pass over the training photos; after each one the model is scored on the validation photos,
-which it never trains on. Watch the loss go down and the mAP go up."""),
+This fine-tunes a model that already learned to see on COCO (118,287 photos) so that it learns our three classes:
+rock, paper and scissors. Each **epoch** is one pass over the training photos; after each one the model is scored on
+the validation photos, which it never trains on. Watch the loss go down and the mAP go up. The mAP can stay near zero
+for the first few epochs: that is normal."""),
 
     code("""#@title Step 5: train
 import time
@@ -233,7 +279,7 @@ metrics = best.val(data=str(DATA))
 MAP50, MAP = metrics["metrics/mAP50"], metrics["metrics/mAP50-95"]
 print(f"\\nmAP50 {MAP50:.3f}   mAP50-95 {MAP:.3f}")
 
-val_images = sorted((DATASET / "images" / "val").glob("*"))
+val_images = photos([VAL_DIR])
 panels, titles = [], []
 for p in val_images[:9]:
     r = best(str(p), conf=0.25)
@@ -249,8 +295,8 @@ print("Give these three numbers to the leaderboard. Then: why do you think your 
 
     md("""## Step 8: try your own photo
 
-Take a photo of one of the signs with your phone, upload it here, and see what your model finds.
-No photo? Press **Cancel upload** and go on to Step 9."""),
+Take a photo of your hand showing rock, paper or scissors, upload it here, and see what your model finds.
+Try a hand it has never seen: yours, a friend's, on a new background. No photo? Press **Cancel upload** and go on to Step 9."""),
 
     code("""#@title Step 8: try your own photo
 try:
@@ -282,13 +328,15 @@ except ImportError:
     md("""## If something goes wrong
 
 - **No GPU, or training is very slow:** Runtime > Change runtime type > T4 GPU, then run everything again from Step 1.
-- **The dataset does not download:** check the link on the slide; a Google Drive file must be shared as
-  "Anyone with the link".
+- **The dataset does not download:** leave the box in Step 3 empty and run it again. A pasted Google Drive link must be
+  shared as "Anyone with the link".
 - **Out of memory:** change `"batch": 16` to `"batch": 8` in Step 2.
 - **Colab disconnected:** Runtime > Run all. Training starts again from the beginning.
 
 Model code: MIT licensed, [github.com/LibreYOLO/libreyolo](https://github.com/LibreYOLO/libreyolo).
-Documentation: [libreyolo.com/docs](https://www.libreyolo.com/docs)."""),
+Documentation: [libreyolo.com/docs](https://www.libreyolo.com/docs).
+Roboflow photos and labels: [Rock Paper Scissors on Roboflow Universe](https://universe.roboflow.com/rock-paper-scissors-2/rock-paper-scissors-bwev7),
+CC BY 4.0."""),
 ]
 
 nb = nbf.v4.new_notebook()
