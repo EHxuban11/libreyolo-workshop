@@ -32,7 +32,7 @@ cells = [
     md("""Download today's dataset: the photos we took and labelled this morning, from Hugging Face."""),
     code("""from huggingface_hub import snapshot_download
 
-snapshot_download("Xuban11/rock-paper-scissors-mondragon", repo_type="dataset", local_dir="dataset")"""),
+snapshot_download("Xuban/rock-paper-scissors-mondragon", repo_type="dataset", local_dir="dataset")"""),
 
     md("""Train. The model already knows how to see from COCO, and now it learns rock, paper and scissors.
 This takes about 10 minutes."""),
