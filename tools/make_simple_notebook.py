@@ -15,7 +15,7 @@ import nbformat as nbf
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 OUT = ROOT / "train_simple.ipynb"
 
-# About 10 minutes on a T4: about 7 s per epoch per 110 photos, train and val (dry run on Colab).
+# About 10 minutes on a T4 for a few hundred photos: about 7 s per epoch per 110 photos, train and val (dry run on Colab).
 EPOCHS = 25
 
 md = nbf.v4.new_markdown_cell
@@ -32,7 +32,7 @@ cells = [
     md("""Download today's dataset: the photos we took and labelled this morning, from Hugging Face."""),
     code("""from huggingface_hub import snapshot_download
 
-snapshot_download("Xuban/rock-paper-scissors-mondragon", repo_type="dataset", local_dir="dataset")"""),
+snapshot_download("Xuban/rock-paper-scissors-room", repo_type="dataset", local_dir="dataset")"""),
 
     md("""Train. The model already knows how to see from COCO, and now it learns rock, paper and scissors.
 This takes about 10 minutes."""),
