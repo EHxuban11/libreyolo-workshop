@@ -41,7 +41,7 @@ Then run the cells from top to bottom: click a cell and press **Shift + Enter**.
 | 9 | Download your model | |"""),
 
     code("""#@title Step 1: install LibreYOLO
-%pip install -q "libreyolo[onnx]" gdown
+%pip install -q "libreyolo[onnx]" gdown pillow-heif
 
 import torch, libreyolo
 print("LibreYOLO", libreyolo.__version__, "| PyTorch", torch.__version__)
@@ -310,10 +310,18 @@ except KeyboardInterrupt:
     print("No photo this time. Go on to Step 9.")
 if not uploaded:
     print("Nothing uploaded; the cell does nothing without a photo.")
+from PIL import ImageOps
+try:
+    from pillow_heif import register_heif_opener
+    register_heif_opener()                 # so iPhone photos (HEIC) open too
+except ImportError:
+    pass
 for name in uploaded:
-    r = best(name, conf=0.25)
+    photo = pathlib.Path(name).with_suffix(".upright.jpg")
+    ImageOps.exif_transpose(Image.open(name)).convert("RGB").save(photo)   # upright JPEG, whatever the phone sent
+    r = best(str(photo), conf=0.25)
     boxes = [(int(c), *xyxy) for c, xyxy in zip(r.boxes.cls.tolist(), r.boxes.xyxy.tolist())]
-    show([draw(pathlib.Path(name), boxes, r.boxes.conf.tolist())], [f"{len(boxes)} found"])"""),
+    show([draw(photo, boxes, r.boxes.conf.tolist())], [f"{len(boxes)} found"])"""),
 
     code("""#@title Step 9: download your model
 ONNX = best.export(format="onnx")          # the same model as one portable file
@@ -330,7 +338,7 @@ except ImportError:
 - **No GPU, or training is very slow:** Runtime > Change runtime type > T4 GPU, then run everything again from Step 1.
 - **The dataset does not download:** leave the box in Step 3 empty and run it again. A pasted Google Drive link must be
   shared as "Anyone with the link".
-- **Out of memory:** change `"batch": 16` to `"batch": 8` in Step 2.
+- **Out of memory:** change `"batch": 16` to `"batch": 8` in Step 3.
 - **Colab disconnected:** Runtime > Run all. Training starts again from the beginning.
 
 Model code: MIT licensed, [github.com/LibreYOLO/libreyolo](https://github.com/LibreYOLO/libreyolo).
