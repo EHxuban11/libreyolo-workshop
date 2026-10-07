@@ -27,7 +27,7 @@ cells = [
 **Runtime > Change runtime type > T4 GPU**, then **Runtime > Run all**."""),
 
     md("Install LibreYOLO."),
-    code("""%pip install -q "libreyolo[onnx]" pillow-heif"""),
+    code("""%pip install -q "libreyolo[onnx]" pillow-heif huggingface_hub"""),
 
     md("""Download today's dataset: the photos we took and labelled this morning, from Hugging Face."""),
     code("""from huggingface_hub import snapshot_download
