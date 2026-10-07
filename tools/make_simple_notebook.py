@@ -29,17 +29,20 @@ cells = [
     md("Install LibreYOLO."),
     code("""%pip install -q "libreyolo[onnx]" pillow-heif huggingface_hub"""),
 
-    md("""Download today's dataset: the photos we took and labelled this morning, from Hugging Face."""),
-    code("""from huggingface_hub import snapshot_download
+    md("""Choose the dataset: **room** is the photos we took and labelled this morning, **roboflow** is about 1,500 photos labelled by Roboflow.
+Roboflow is bigger, so it downloads in a few minutes and trains for fewer epochs."""),
+    code("""DATASET = "room"  #@param ["room", "roboflow"]
 
-snapshot_download("Xuban/rock-paper-scissors-room", repo_type="dataset", local_dir="dataset")"""),
+from huggingface_hub import snapshot_download
+
+snapshot_download(f"Xuban/rock-paper-scissors-{DATASET}", repo_type="dataset", local_dir="dataset")"""),
 
     md("""Train. The model already knows how to see from COCO, and now it learns rock, paper and scissors.
 This takes about 10 minutes."""),
     code(f"""from libreyolo import LibreYOLO
 
 model = LibreYOLO("LibreYOLO9t.pt")
-results = model.train(data="dataset/data.yaml", epochs={EPOCHS}, imgsz=640)"""),
+results = model.train(data="dataset/data.yaml", epochs={EPOCHS} if DATASET == "room" else 6, imgsz=640)"""),
 
     md("Score the best model on the validation photos, which it never trained on. mAP50 goes from 0 to 1: higher is better."),
     code("""best = LibreYOLO(results["best_checkpoint"])
