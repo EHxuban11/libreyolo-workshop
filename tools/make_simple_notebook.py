@@ -29,12 +29,10 @@ cells = [
     md("Install LibreYOLO."),
     code("""%pip install -q "libreyolo[onnx]" pillow-heif"""),
 
-    md("""Download the dataset: the room's photos and labels, or the backup dataset if the room's is not ready yet.
-It prints rps-room for the room's dataset, rps-backup for the backup."""),
-    code("""url = "https://github.com/EHxuban11/libreyolo-workshop/releases/download/data/"
-!curl -fsLo data.zip {url}rps-room.zip || curl -fsLo data.zip {url}rps-backup.zip
-!rm -rf dataset rps-room rps-backup && unzip -q data.zip
-!ls -d rps-* && mv rps-* dataset"""),
+    md("""Download today's dataset: the photos we took and labelled this morning, from Hugging Face."""),
+    code("""from huggingface_hub import snapshot_download
+
+snapshot_download("Xuban11/rock-paper-scissors-mondragon", repo_type="dataset", local_dir="dataset")"""),
 
     md("""Train. The model already knows how to see from COCO, and now it learns rock, paper and scissors.
 This takes about 10 minutes."""),
